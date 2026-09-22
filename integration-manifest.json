@@ -1,0 +1,46 @@
+{
+  "$schema": "https://keyfactor.github.io/v2/integration-manifest-schema.json",
+  "integration_type": "dns-plugin",
+  "name": "UltraDNS DNS Plugin",
+  "status": "production",
+  "support_level": "kf-supported",
+  "update_catalog": true,
+  "link_github": true,
+  "description": "DNS-01 challenge validation provider using DigiCert UltraDNS. Implements the IDomainValidator interface to create, manage, and clean up DNS TXT records in UltraDNS-hosted zones for ACME domain validation. Authenticates via an UltraDNS account username and password (OAuth2 password grant).",
+  "release_dir": "Keyfactor.DnsProvider.UltraDns/bin/Release",
+  "release_project": "Keyfactor.DnsProvider.UltraDns/Keyfactor.DnsProvider.UltraDns.csproj",
+  "about": {
+    "dns_provider": {
+      "providerName": "ultradns",
+      "displayName": "UltraDNS",
+      "assemblyName": "UltraDnsDomainValidator",
+      "fullyQualifiedClassName": "Keyfactor.Extensions.DomainValidator.UltraDns.UltraDnsDomainValidator",
+      "validationType": "dns-01",
+      "providerEndpoint": "api.ultradns.com",
+      "providerDocsUrl": "https://docs.ultradns.com/",
+      "serviceStatusUrl": "https://status.ultradns.com/",
+      "dns_provider_config": [
+        {
+          "Name": "UltraDns_Username",
+          "DisplayName": "UltraDNS Username",
+          "DataType": 1,
+          "InstanceLevel": false,
+          "Hidden": false,
+          "DefaultValue": "",
+          "Required": true,
+          "Description": "UltraDNS account username used for OAuth2 password-grant authentication."
+        },
+        {
+          "Name": "UltraDns_Password",
+          "DisplayName": "UltraDNS Password",
+          "DataType": 2,
+          "InstanceLevel": false,
+          "Hidden": true,
+          "DefaultValue": "",
+          "Required": true,
+          "Description": "UltraDNS account password used for OAuth2 password-grant authentication."
+        }
+      ]
+    }
+  }
+}

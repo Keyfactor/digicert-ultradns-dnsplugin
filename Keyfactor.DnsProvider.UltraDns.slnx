@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Keyfactor.DnsProvider.UltraDns/Keyfactor.DnsProvider.UltraDns.csproj" />
+  <Project Path="Keyfactor.DnsProvider.UltraDns.Tests/Keyfactor.DnsProvider.UltraDns.Tests.csproj" />
+</Solution>
