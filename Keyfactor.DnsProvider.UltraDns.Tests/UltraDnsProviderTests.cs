@@ -212,6 +212,144 @@ namespace Keyfactor.Extensions.DomainValidator.UltraDns.Tests
             Assert.Equal(2, tokenCallCount);
         }
 
+        [Fact]
+        public async Task FindZoneForRecordAsync_PagesAcrossMultipleResponses()
+        {
+            var zonePage1 = "{\"zones\":[{\"properties\":{\"name\":\"other.com.\"}}],\"resultInfo\":{\"totalCount\":2,\"returnedCount\":1}}";
+            var zonePage2 = "{\"zones\":[{\"properties\":{\"name\":\"example.com.\"}}],\"resultInfo\":{\"totalCount\":2,\"returnedCount\":1}}";
+            var zoneRequestCount = 0;
+
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    zoneRequestCount++;
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, zoneRequestCount == 1 ? zonePage1 : zonePage2);
+                }
+                if (request.Method == HttpMethod.Delete)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            }, out var handler);
+
+            var result = await provider.DeleteRecordAsync("_acme-challenge.example.com", "TXT");
+
+            Assert.True(result);
+            Assert.Equal(2, zoneRequestCount);
+        }
+
+        [Fact]
+        public async Task FindZoneForRecordAsync_EmptyZoneList_Throws()
+        {
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, "{\"zones\":[],\"resultInfo\":{\"totalCount\":0,\"returnedCount\":0}}");
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            }, out var handler);
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                provider.CreateRecordAsync("_acme-challenge.example.com", "value", "TXT"));
+
+            Assert.Contains("empty or invalid zones list", ex.Message);
+        }
+
+        [Fact]
+        public async Task CreateRecordAsync_UnexpectedFailure_Throws()
+        {
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, ZoneListResponseJson);
+                }
+                if (request.Method == HttpMethod.Post)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.InternalServerError, "[{\"errorCode\":9999,\"errorMessage\":\"Unexpected server error\"}]");
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            }, out var handler);
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                provider.CreateRecordAsync("_acme-challenge.example.com", "value", "TXT"));
+
+            Assert.Contains("500", ex.Message);
+        }
+
+        [Fact]
+        public async Task DeleteRecordAsync_UnexpectedFailure_Throws()
+        {
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, ZoneListResponseJson);
+                }
+                if (request.Method == HttpMethod.Delete)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.InternalServerError, "[{\"errorCode\":9999,\"errorMessage\":\"Unexpected server error\"}]");
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            }, out var handler);
+
+            var ex = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+                provider.DeleteRecordAsync("_acme-challenge.example.com", "TXT"));
+
+            Assert.Contains("500", ex.Message);
+        }
+
+        [Fact]
+        public async Task SendAsync_RateLimited_RetriesOnceAfterDelay()
+        {
+            var zoneRequestCount = 0;
+
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    zoneRequestCount++;
+                    if (zoneRequestCount == 1)
+                    {
+                        return FakeHttpMessageHandler.Json((HttpStatusCode)429, "[{\"errorCode\":429,\"errorMessage\":\"Too many requests\"}]");
+                    }
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, ZoneListResponseJson);
+                }
+                if (request.Method == HttpMethod.Delete)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            }, out var handler);
+
+            var result = await provider.DeleteRecordAsync("_acme-challenge.example.com", "TXT");
+
+            Assert.True(result);
+            Assert.Equal(2, zoneRequestCount);
+        }
+
         [Theory]
         [InlineData("example.com", "example.com.")]
         [InlineData("example.com.", "example.com.")]

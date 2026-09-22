@@ -431,3 +431,6 @@ FodyWeavers.xsd
 # Claude Code / secrets
 .claude/
 .secrets/
+
+# Test coverage output
+TestResults/

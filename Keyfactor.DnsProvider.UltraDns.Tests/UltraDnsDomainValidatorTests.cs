@@ -73,6 +73,24 @@ namespace Keyfactor.Extensions.DomainValidator.UltraDns.Tests
         }
 
         [Fact]
+        public async Task ValidateConfiguration_ThrowsWhenUsernameMissing()
+        {
+            var validator = new UltraDnsDomainValidator();
+            var config = new Dictionary<string, object> { ["UltraDns_Password"] = "pass" };
+
+            await Assert.ThrowsAsync<ArgumentException>(() => validator.ValidateConfiguration(config));
+        }
+
+        [Fact]
+        public async Task ValidateConfiguration_Succeeds_WhenBothFieldsPresent()
+        {
+            var validator = new UltraDnsDomainValidator();
+            var config = new Dictionary<string, object> { ["UltraDns_Username"] = "user", ["UltraDns_Password"] = "pass" };
+
+            await validator.ValidateConfiguration(config);
+        }
+
+        [Fact]
         public async Task StageValidation_Success_ReturnsSuccessResult()
         {
             var provider = CreateProvider(request =>
@@ -194,6 +212,80 @@ namespace Keyfactor.Extensions.DomainValidator.UltraDns.Tests
 
             Assert.True(stageResult.Success);
             Assert.True(cleanupResult.Success);
+        }
+
+        [Fact]
+        public async Task CleanupValidation_MultipleOutstandingValues_DequeuesOldestOnSuccess()
+        {
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, ZoneListResponseJson);
+                }
+                if (request.Method == HttpMethod.Post)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.Created, "{}");
+                }
+                if (request.Method == HttpMethod.Delete)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            });
+
+            var validator = new UltraDnsDomainValidator(provider);
+            await validator.StageValidation("_acme-challenge.example.com", "value-1", CancellationToken.None);
+            await validator.StageValidation("_acme-challenge.example.com", "value-2", CancellationToken.None);
+
+            var firstCleanup = await validator.CleanupValidation("_acme-challenge.example.com", CancellationToken.None);
+            var secondCleanup = await validator.CleanupValidation("_acme-challenge.example.com", CancellationToken.None);
+
+            Assert.True(firstCleanup.Success);
+            Assert.True(secondCleanup.Success);
+        }
+
+        [Fact]
+        public async Task CleanupValidation_NoOutstandingValue_StillDeletesRecord()
+        {
+            var provider = CreateProvider(request =>
+            {
+                if (request.RequestUri.AbsolutePath.EndsWith("authorization/token"))
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, TokenResponseJson);
+                }
+                if (request.RequestUri.AbsolutePath.Contains("/zones") && request.Method == HttpMethod.Get)
+                {
+                    return FakeHttpMessageHandler.Json(HttpStatusCode.OK, ZoneListResponseJson);
+                }
+                if (request.Method == HttpMethod.Delete)
+                {
+                    return new HttpResponseMessage(HttpStatusCode.NoContent);
+                }
+                throw new InvalidOperationException($"Unexpected request: {request.Method} {request.RequestUri}");
+            });
+
+            var validator = new UltraDnsDomainValidator(provider);
+            var result = await validator.CleanupValidation("_acme-challenge.example.com", CancellationToken.None);
+
+            Assert.True(result.Success);
+        }
+
+        [Fact]
+        public async Task CleanupValidation_ProviderThrows_ReturnsFailureResultWithoutThrowing()
+        {
+            var provider = CreateProvider(request =>
+                FakeHttpMessageHandler.Json(HttpStatusCode.Unauthorized, "[{\"errorCode\":0,\"errorMessage\":\"bad creds\"}]"));
+
+            var validator = new UltraDnsDomainValidator(provider);
+            var result = await validator.CleanupValidation("_acme-challenge.example.com", CancellationToken.None);
+
+            Assert.False(result.Success);
+            Assert.NotNull(result.ErrorMessage);
         }
     }
 }
