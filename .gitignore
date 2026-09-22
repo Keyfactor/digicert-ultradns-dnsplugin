@@ -427,3 +427,10 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+# Claude Code / secrets
+.claude/
+.secrets/
+
+# Test coverage output
+TestResults/

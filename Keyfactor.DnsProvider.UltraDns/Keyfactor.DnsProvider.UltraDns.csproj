@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>disable</Nullable>
+    <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+    <RootNamespace>Keyfactor.Extensions.DomainValidator.UltraDns</RootNamespace>
+    <AssemblyName>UltraDnsDomainValidator</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Keyfactor.AnyGateway.IAnyCAPlugin" Version="3.3.0" />
+    <PackageReference Include="Keyfactor.Logging" Version="1.3.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+    <None Update="manifest.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+</Project>

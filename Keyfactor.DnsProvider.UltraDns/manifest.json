@@ -1,0 +1,10 @@
+{
+  "extensions": {
+    "Keyfactor.AnyGateway.Extensions.IDomainValidator": {
+      "UltraDnsDomainValidator": {
+        "assemblypath": "UltraDnsDomainValidator.dll",
+        "TypeFullName": "Keyfactor.Extensions.DomainValidator.UltraDns.UltraDnsDomainValidator"
+      }
+    }
+  }
+}
