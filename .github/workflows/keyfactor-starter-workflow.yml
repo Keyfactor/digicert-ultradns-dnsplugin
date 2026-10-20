@@ -28,7 +28,13 @@ jobs:
 
   call-sign:
     needs: call-starter-workflow
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release-'))
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' && (
+        (github.event.action != 'closed' && startsWith(github.base_ref, 'release-')) ||
+        (github.event.action == 'closed' && github.event.pull_request.merged == true &&
+          (github.base_ref == 'main' || startsWith(github.base_ref, 'release-')))
+      ))
     runs-on: ubuntu-latest
     steps:
       - name: Dispatch codesigning
