@@ -5,7 +5,7 @@ namespace Keyfactor.Extensions.DomainValidator.UltraDns.Tests
 {
     public class UltraDnsProviderTests
     {
-        private const string TokenResponseJson = "{\"accessToken\":\"token-1\",\"refreshToken\":\"refresh-1\",\"expiresIn\":3600}";
+        private const string TokenResponseJson = "{\"accessToken\":\"token-1\",\"refreshToken\":\"refresh-1\",\"expiresIn\":\"3600\"}";
         private const string ZoneListResponseJson =
             "{\"zones\":[{\"properties\":{\"name\":\"example.com.\"}},{\"properties\":{\"name\":\"com.\"}}]," +
             "\"resultInfo\":{\"totalCount\":2,\"returnedCount\":2}}";
