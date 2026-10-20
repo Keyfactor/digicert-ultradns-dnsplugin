@@ -25,3 +25,16 @@ jobs:
       entra_password: ${{ secrets.DOCTOOL_ENTRA_PASSWD }}
       command_client_id: ${{ secrets.COMMAND_CLIENT_ID }}
       command_client_secret: ${{ secrets.COMMAND_CLIENT_SECRET }}
+
+  call-sign:
+    needs: call-starter-workflow
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release-'))
+    runs-on: ubuntu-latest
+    steps:
+      - name: Dispatch codesigning
+        env:
+          GH_TOKEN: ${{ secrets.V2BUILDTOKEN }}
+        run: |
+          gh workflow run new-sign.yml \
+            -R Keyfactor/integration-codesigning \
+            -f targetRepo=${{ github.event.repository.name }}

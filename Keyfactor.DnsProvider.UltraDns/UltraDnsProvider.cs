@@ -42,7 +42,9 @@ namespace Keyfactor.Extensions.DomainValidator.UltraDns
             [JsonPropertyName("accessToken")]
             public string AccessToken { get; set; }
 
+            // UltraDNS returns expiresIn as a JSON string (e.g. "3599"), not a number.
             [JsonPropertyName("expiresIn")]
+            [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
             public int ExpiresIn { get; set; }
         }
 
